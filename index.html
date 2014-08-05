@@ -1,0 +1,224 @@
+<html>
+<head>
+  <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+    }
+
+    .detail {
+      padding-top:10px;
+      padding-bottom: 15px;
+      color:gray;
+    }
+
+    .eventElem {
+      border-bottom: 2px solid gray;
+      padding: 7px;
+      width:300px;
+      padding-left: 15px;
+    }
+
+    .eventElem:hover {
+      background-color: rgb(252, 213, 142);
+    }
+
+    .logistics {
+      color: gray;
+    }
+
+    .title {
+      padding-left: 15px;
+      padding-right: 40px;
+    }
+
+    .time, .location, .title {
+      color:gray;
+      font-size: 14px;
+      display: inline-block;
+    }
+
+    .location {
+      display:none;
+    }
+
+    .logistics {
+      text-align: left;
+      display: inline-block;
+    }
+
+    .active > .logistics {
+      text-align: right;
+      display: block;
+    }
+    
+    .eventElem:hover .location, .active .location {
+      display:block;
+    }
+
+    .active > .title {
+      color:black;
+      display: block;
+      padding-left: 0px;
+      font-size: 16px;
+    }
+
+    .active {
+      border-left: solid green 10px;
+    }
+
+    
+  </style>
+  <script src="./jQueryLibs/jquery-2.1.1.min.js"></script>
+  <script>
+    function load() {
+      //gapi.client.setApiKey('');
+      var config = {
+        'client_id': '391082248899-0ktrs88avta21tl3smsqrsv8kfsd7k3p.apps.googleusercontent.com',
+        'scope': 'https://www.googleapis.com/auth/calendar'
+      };
+      gapi.auth.authorize(config, function() {
+        //console.log('login complete');
+        //console.log(gapi.auth.getToken());
+        gapi.client.load('calendar', 'v3', makeRequest);
+      });
+    }
+
+    function makeRequest() {
+      var newDate = new Date();
+
+      // temporary event filter only lists events in the next day. Ideally, it should list events until a quota of events (3) is met to fill out the widget.
+
+      var request = gapi.client.calendar.events.list({
+        calendarId: 'lh7f9qf4fld1kblm14b988e5ek@group.calendar.google.com',
+        singleEvents: true,
+        timeMin: newDate.toISOString(),
+        //timeMax: newDate.setDate(newDate.getDate() + 1).toISOString(),
+        orderBy: 'startTime'
+      });
+
+      request.execute(function(response) {
+        fillWidget(response.items);
+
+      });
+    }
+
+    function fillWidget(eventList) {
+      console.log(eventList);
+      var breaked = false;
+      var today = new Date();
+      var eventsExistToday = false;
+
+      for (var i = 0; i < eventList.length; i++) {
+        var afterToday = false;
+        var item = eventList[i];
+
+        var eventElement = document.createElement('div');
+        $(eventElement).addClass('eventElem');
+
+        var info_title = document.createElement('div');
+        $(info_title).addClass("title")
+                      .text(item.summary)
+                      .appendTo($(eventElement));
+
+        function convertISODate(ISOString) {
+          var date = new Date(ISOString);
+          return date;
+        }
+
+        // handles date object and returns a text string consisting of time of day in 12 hour, AM/PM format.
+        function convertToTime(date) {
+          var timeString;
+          var afternoon = false;
+
+          if (date.getHours() >= 12)
+            afternoon = true;
+
+          timeString = afternoon ? date.getHours() - 12 : date.getHours();
+          timeString += ":";
+          timeString += ( date.getMinutes() % 100 == 0 ) ? "0" + date.getMinutes() : date.getMinutes();
+          timeString += " ";
+          timeString += afternoon ? "PM" : "AM";
+          return timeString;
+        }
+
+        function generateDate(date) {
+          return (date.getMonth() + 1) + '/' + date.getDate();
+        }
+
+        var info_cont = document.createElement('div');
+
+        // create and preprocess startTime
+        var startTime = convertISODate(item.start.dateTime);
+        if (startTime.getDate() > today.getDate()) afterToday = true;
+        else if (startTime.getDate() === today.getDate()) eventsExistToday = true;
+
+        var dateString = convertToTime(startTime) + " - " + convertToTime(convertISODate(item.end.dateTime));
+        if (afterToday) dateString += " on " + generateDate(startTime);
+
+        var info_time = document.createElement('div');
+        $(info_time).addClass('time')
+                    .text(dateString)
+                    .appendTo($(info_cont));
+
+
+        if (item.location) {
+          var info_location = document.createElement('div');
+          $(info_location).addClass('location')
+                          .text(item.location)
+                          .appendTo($(info_cont));
+        }
+
+        $(info_cont).addClass('logistics')
+                    .appendTo(eventElement);
+        
+        var linkify = document.createElement('a');
+        $(eventElement).appendTo(linkify);
+
+
+        if (!eventsExistToday && !breaked) {
+          $('.eventCont').append("<p>No events scheduled for today!</p>");
+        }
+
+        if (!breaked && afterToday) {
+          var upcoming = document.createElement('div');
+          $(upcoming).addClass('detail')
+                      .text('Upcoming events');
+          $('.eventCont').append(upcoming);
+          breaked = true;
+        }
+
+        $('.eventCont').append($(linkify));
+
+        if (!i) $(eventElement).addClass('active');
+
+
+      }
+
+      listenForNav();
+    }
+
+    function listenForNav() {
+      $('.eventElem').click(function() {
+        console.log('clicked');
+        $(this).addClass('active');
+        $('.eventElem').not($(this)).removeClass('active');
+      })
+    }
+
+  </script>
+  <script src="https://apis.google.com/js/client.js?onload=load"></script>
+</head>
+<body>
+  <div class="mainContainer">
+    <div class="intro">
+      <div class="detail">Today</div>
+    </div>
+    <div class="eventCont">
+<!--       <p class="info">description test test</p>
+      <p class="info">time time time time</p> -->
+    </div>
+  </div>
+   <!--  <button onclick="load();">click to login</button> -->
+</body>
+</html>
