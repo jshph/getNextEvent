@@ -69,42 +69,39 @@
 
     
   </style>
-  <script src="./jQueryLibs/jquery-2.1.1.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
   <script>
-    function load() {
-      //gapi.client.setApiKey('');
-      var config = {
-        'client_id': '391082248899-0ktrs88avta21tl3smsqrsv8kfsd7k3p.apps.googleusercontent.com',
-        'scope': 'https://www.googleapis.com/auth/calendar'
-      };
-      gapi.auth.authorize(config, function() {
-        //console.log('login complete');
-        //console.log(gapi.auth.getToken());
-        gapi.client.load('calendar', 'v3', makeRequest);
-      });
-    }
+    var mykey = 'AIzaSyB0XHfSOtB46ACNHAFtWRHai5cordII94E'; // typically like Gtg-rtZdsreUr_fLfhgPfgff
+    var calendarid = 'lh7f9qf4fld1kblm14b988e5ek@group.calendar.google.com'; // will look somewhat like 3ruy234vodf6hf4sdf5sd84f@group.calendar.google.com
+
+
 
     function makeRequest() {
       var newDate = new Date();
 
       // temporary event filter only lists events in the next day. Ideally, it should list events until a quota of events (3) is met to fill out the widget.
 
-      var request = gapi.client.calendar.events.list({
-        calendarId: 'lh7f9qf4fld1kblm14b988e5ek@group.calendar.google.com',
-        singleEvents: true,
-        timeMin: newDate.toISOString(),
-        //timeMax: newDate.setDate(newDate.getDate() + 1).toISOString(),
-        orderBy: 'startTime'
-      });
-
-      request.execute(function(response) {
-        fillWidget(response.items);
-
+      $.ajax({
+          type: 'GET',
+          url: encodeURI('https://www.googleapis.com/calendar/v3/calendars/' + calendarid + '/events?'
+            + 'key=' + mykey
+            + '&singleEvents=true'
+            + '&timeMin=' + newDate.toISOString()
+            + '&orderBy=startTime'
+            + '&maxResults=5'),
+          dataType: 'json',
+          success: function (response) {
+              fillWidget(response.items);
+          },
+          error: function (response) {
+              console.log(response); //error!
+          }
       });
     }
 
+    makeRequest();
+
     function fillWidget(eventList) {
-      console.log(eventList);
       var breaked = false;
       var today = new Date();
       var eventsExistToday = false;
@@ -135,6 +132,7 @@
             afternoon = true;
 
           timeString = afternoon ? date.getHours() - 12 : date.getHours();
+          timeString = timeString == 0 ? 12 : timeString;
           timeString += ":";
           timeString += ( date.getMinutes() % 100 == 0 ) ? "0" + date.getMinutes() : date.getMinutes();
           timeString += " ";
