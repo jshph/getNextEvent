@@ -17,13 +17,14 @@
       padding: 7px;
       width:300px;
       padding-left: 15px;
+      cursor:pointer;
     }
 
     .eventElem:hover {
       background-color: rgb(252, 213, 142);
     }
 
-    .logistics {
+    .info_cont {
       color: gray;
     }
 
@@ -42,12 +43,12 @@
       display:none;
     }
 
-    .logistics {
+    .info_cont {
       text-align: left;
       display: inline-block;
     }
 
-    .active > .logistics {
+    .active > .info_cont {
       text-align: right;
       display: block;
     }
@@ -91,7 +92,7 @@
             + '&maxResults=5'),
           dataType: 'json',
           success: function (response) {
-              fillWidget(response.items);
+              sortAndFill(response.items);
           },
           error: function (response) {
               console.log(response); //error!
@@ -101,107 +102,131 @@
 
     makeRequest();
 
-    function fillWidget(eventList) {
-      var breaked = false;
-      var today = new Date();
-      var eventsExistToday = false;
 
-      for (var i = 0; i < eventList.length; i++) {
-        var afterToday = false;
-        var item = eventList[i];
+    // functions for later use ///////////////
 
-        var eventElement = document.createElement('div');
-        $(eventElement).addClass('eventElem');
+    function convertISODate(ISOString) {
+      var date = new Date(ISOString);
+      return date;
+    }
 
-        var info_title = document.createElement('div');
-        $(info_title).addClass("title")
-                      .text(item.summary)
-                      .appendTo($(eventElement));
 
-        function convertISODate(ISOString) {
-          var date = new Date(ISOString);
-          return date;
+    // handles date object and returns a text string consisting of time of day in 12 hour, AM/PM format.
+    function convertToTime(date) {
+      var timeString;
+      var afternoon = false;
+
+      if (date.getHours() >= 12)
+        afternoon = true;
+
+      timeString = afternoon ? date.getHours() - 12 : date.getHours();
+      timeString = timeString == 0 ? 12 : timeString;
+      timeString += ":";
+      timeString += ( date.getMinutes() % 100 == 0 ) ? "0" + date.getMinutes() : date.getMinutes();
+      timeString += " ";
+      timeString += afternoon ? "PM" : "AM";
+      return timeString;
+    }
+
+    // generates string date.
+    function generateDate(date) {
+      return (date.getMonth() + 1) + '/' + date.getDate();
+    }
+
+
+    // encapsulate generation of single event element, return DOM object.
+    function generateElement(isToday, calEvent) {
+        // Construct container for each event.
+        // eventCont > linkify > info_cont > info_time + info_location
+      var startTime = convertISODate(calEvent.start.dateTime);
+      var dateString = convertToTime(startTime) + " - " + convertToTime(convertISODate(calEvent.end.dateTime));
+      if (!isToday) dateString += " on " + generateDate(startTime);
+
+      var eventElement = document.createElement('div');
+      $(eventElement).addClass('eventElem');
+
+      var info_title = document.createElement('div');
+      $(info_title).addClass("title")
+                    .text(calEvent.summary)
+                    .appendTo($(eventElement));
+
+      // contains details.
+      var info_cont = document.createElement('div');
+      $(info_cont).addClass('info_cont')
+                  .appendTo(eventElement);
+
+      var info_time = document.createElement('div');
+      $(info_time).addClass('time')
+                  .text(dateString)
+                  .appendTo($(info_cont));
+
+
+      if (calEvent.location) {
+        var info_location = document.createElement('div');
+        $(info_location).addClass('location')
+                        .text(calEvent.location)
+                        .appendTo($(info_cont));
+      }
+      
+      var linkify = document.createElement('a');
+      $(eventElement).appendTo(linkify);
+
+
+      return eventElement;
+    }
+
+    // create and preprocess startTime, convert to presentable date string for widget.
+
+/*    function fill(isToday, startIndex) {
+      if (isToday) {
+        var eventCont = $('#eventsToday');
+        for (var i = startIndex; i < this.eventList.length; i++) {// called with context, so has eventList
+          if (this.eventList[i].start.dateTime > today.getDate())
+            return i;
+          $(eventCont).append($(generateElement.call(this, this.eventList[i])));
         }
-
-        // handles date object and returns a text string consisting of time of day in 12 hour, AM/PM format.
-        function convertToTime(date) {
-          var timeString;
-          var afternoon = false;
-
-          if (date.getHours() >= 12)
-            afternoon = true;
-
-          timeString = afternoon ? date.getHours() - 12 : date.getHours();
-          timeString = timeString == 0 ? 12 : timeString;
-          timeString += ":";
-          timeString += ( date.getMinutes() % 100 == 0 ) ? "0" + date.getMinutes() : date.getMinutes();
-          timeString += " ";
-          timeString += afternoon ? "PM" : "AM";
-          return timeString;
-        }
-
-        function generateDate(date) {
-          return (date.getMonth() + 1) + '/' + date.getDate();
-        }
-
-        var info_cont = document.createElement('div');
-
-        // create and preprocess startTime
-        var startTime = convertISODate(item.start.dateTime);
-        if (startTime.getDate() > today.getDate()) afterToday = true;
-        else if (startTime.getDate() === today.getDate()) eventsExistToday = true;
-
-        var dateString = convertToTime(startTime) + " - " + convertToTime(convertISODate(item.end.dateTime));
-        if (afterToday) dateString += " on " + generateDate(startTime);
-
-        var info_time = document.createElement('div');
-        $(info_time).addClass('time')
-                    .text(dateString)
-                    .appendTo($(info_cont));
-
-
-        if (item.location) {
-          var info_location = document.createElement('div');
-          $(info_location).addClass('location')
-                          .text(item.location)
-                          .appendTo($(info_cont));
-        }
-
-        $(info_cont).addClass('logistics')
-                    .appendTo(eventElement);
-        
-        var linkify = document.createElement('a');
-        $(eventElement).appendTo(linkify);
-
-
-        if (!eventsExistToday && !breaked) {
-          $('.eventCont').append("<p>No events scheduled for today!</p>");
-        }
-
-        if (!breaked && afterToday) {
-          var upcoming = document.createElement('div');
-          $(upcoming).addClass('detail')
-                      .text('Upcoming events');
-          $('.eventCont').append(upcoming);
-          breaked = true;
-        }
-
-        $('.eventCont').append($(linkify));
-
-        if (!i) $(eventElement).addClass('active');
-
-
       }
 
+      else {
+        var eventCont = $('#eventsUpcoming');
+        for (var i = startIndex; i < this.eventList.length; i++) // called with context, so has eventList
+          $(eventCont).append($(generateElement.call(this, this.eventList[i])));
+      }
+
+      if ($(eventCont).is(':empty'))
+        $(eventCont).append("<p>No events scheduled!</p>");
+    }*/
+
+
+    // populate calendar. THIS IS WHERE ALL DA MAGIC HAPPEN ///////////////
+    function sortAndFill(eventList) {
+      var today = new Date();
+      var i; //index
+      for (i = 0; i < eventList.length; i++) {
+        if (convertISODate(eventList[i].start.dateTime) > today.getDate()) break;
+        $('#eventsToday').append($(generateElement(true, eventList[i])));
+      }
+
+      if ($('#eventsToday').children().length === 1)
+        $('#eventsToday').append("<p>No events scheduled!</p>");
+
+      for (i; i < eventList.length; i++)
+        $('#eventsUpcoming').append($(generateElement(false, eventList[i])));
+
+      if ($('#eventsUpcoming').children().length === 1)
+        $('#eventsUpcoming').append("<p>No events scheduled!</p>");
+
+      // fill.call(this, false, fill.call(this, true, 0));
       listenForNav();
     }
 
     function listenForNav() {
+
       $('.eventElem').click(function() {
         console.log('clicked');
         $(this).addClass('active');
         $('.eventElem').not($(this)).removeClass('active');
-      })
+      });
     }
 
   </script>
@@ -209,13 +234,8 @@
 </head>
 <body>
   <div class="mainContainer">
-    <div class="intro">
-      <div class="detail">Today</div>
-    </div>
-    <div class="eventCont">
-<!--       <p class="info">description test test</p>
-      <p class="info">time time time time</p> -->
-    </div>
+    <div id="eventsToday"><h3>Today</h3></div>
+    <div id="eventsUpcoming"><h3>Upcoming</h3></div>
   </div>
    <!--  <button onclick="load();">click to login</button> -->
 </body>
