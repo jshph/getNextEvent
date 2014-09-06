@@ -13,23 +13,24 @@
     }
 
     .eventElem {
-      border-bottom: 2px solid gray;
       padding: 7px;
-      width:300px;
+      width:400px;
       padding-left: 15px;
       cursor:pointer;
     }
 
     .eventElem:hover {
       background-color: rgb(252, 213, 142);
+      display:inline-block;
     }
 
     .info_cont {
       color: gray;
+      text-align: left;
+      display: block;
     }
 
     .title {
-      padding-left: 15px;
       padding-right: 40px;
     }
 
@@ -43,29 +44,35 @@
       display:none;
     }
 
-    .info_cont {
-      text-align: left;
-      display: inline-block;
+    .desc {
+      display:none;
+      background-color: rgb(230, 230, 230);
+      padding:10px;
+      margin-top:15px;
+      margin-bottom:7px;
     }
 
     .active > .info_cont {
-      text-align: right;
-      display: block;
+      display: inline-block;
+    }
+
+    .active > .desc {
+      display:block;
     }
     
-    .eventElem:hover .location, .active .location {
+    .eventElem:hover .location {
       display:block;
     }
 
     .active > .title {
       color:black;
-      display: block;
+      display: inline-block;
       padding-left: 0px;
       font-size: 16px;
     }
 
     .active {
-      border-left: solid green 10px;
+      border-left: solid rgb(160, 203, 238) 10px;
     }
 
     
@@ -160,6 +167,10 @@
                   .text(dateString)
                   .appendTo($(info_cont));
 
+      var info_desc = document.createElement('div');
+      $(info_desc).addClass('desc')
+                  .html('<p>' + calEvent.description + '</p>')
+                  .appendTo($(eventElement));
 
       if (calEvent.location) {
         var info_location = document.createElement('div');
