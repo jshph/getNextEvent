@@ -6,6 +6,10 @@
       font-family: 'Roboto', sans-serif;
     }
 
+    h4 {
+      line-height: .6em;
+    }
+
     .detail {
       padding-top:10px;
       padding-bottom: 15px;
@@ -17,11 +21,12 @@
       width:400px;
       padding-left: 15px;
       cursor:pointer;
+      position:relative;
+      overflow:auto;
     }
 
     .eventElem:hover {
       background-color: rgb(252, 213, 142);
-      display:inline-block;
     }
 
     .info_cont {
@@ -47,9 +52,26 @@
     .desc {
       display:none;
       background-color: rgb(230, 230, 230);
-      padding:10px;
+      padding:14px;
       margin-top:15px;
       margin-bottom:7px;
+    }
+
+    .arrow {
+      /*right: 20;*/
+      position:absolute;
+      margin: auto;
+      margin-left:350px;
+      top:0;
+      bottom: 0;
+      cursor:pointer;
+      display:none;
+      z-index:5;
+      opacity: .6;
+    }
+
+    .arrow:hover {
+      opacity:1;
     }
 
     .active > .info_cont {
@@ -60,7 +82,7 @@
       display:block;
     }
     
-    .eventElem:hover .location {
+    .eventElem:hover .location, .eventElem:hover:not(.active) .arrow {
       display:block;
     }
 
@@ -69,6 +91,10 @@
       display: inline-block;
       padding-left: 0px;
       font-size: 16px;
+    }
+
+    .active .arrow {
+      display:none;
     }
 
     .active {
@@ -154,7 +180,7 @@
 
       var info_title = document.createElement('div');
       $(info_title).addClass("title")
-                    .text(calEvent.summary)
+                    .html('<h4>' + calEvent.summary + '</h4>')
                     .appendTo($(eventElement));
 
       // contains details.
@@ -164,7 +190,7 @@
 
       var info_time = document.createElement('div');
       $(info_time).addClass('time')
-                  .text(dateString)
+                  .html('<p>' + dateString + '</p>')
                   .appendTo($(info_cont));
 
       var info_desc = document.createElement('div');
@@ -175,10 +201,18 @@
       if (calEvent.location) {
         var info_location = document.createElement('div');
         $(info_location).addClass('location')
-                        .text(calEvent.location)
+                        .html('<p>' + calEvent.location + '</p>')
                         .appendTo($(info_cont));
       }
       
+      var arrow = document.createElement('img')
+      $(arrow).attr({
+                src: "http://dental.anatomage.com/images/mdstudio/right-normal.png",
+                width: 17
+              })
+              .addClass('arrow')
+              .appendTo($(eventElement));
+
       var linkify = document.createElement('a');
       $(eventElement).appendTo(linkify);
 
