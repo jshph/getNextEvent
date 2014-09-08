@@ -13,6 +13,49 @@
       -webkit-margin-end: 0px;
     }
 
+    .mainContainer {
+      left: 0;
+      transition: .4s;
+      display:inline-block;
+      position:relative;
+    }
+
+    .descInfo_cont {
+      position:absolute;
+      /*left: 400;*/
+      left:0;
+      top: 0;
+      transition: opacity .4s, height 0;
+      height:700px;
+      vertical-align: top;
+      display:none;
+      opacity:1;
+    }
+
+    .descInfo {
+      width: 450px;
+      height: 100%;
+      padding: 15px;
+      background-color: rgb(229, 238, 254);
+      display: inline-block;
+      position: relative;
+      vertical-align: top;
+    }
+
+    .descInfo_sidebar {
+      width: 50px;
+      background-color: rgb(179, 179, 179);
+      height: 100%;
+      display: inline-block;
+      position: relative;
+      top: 0;
+      cursor:pointer;
+    }
+
+    .descInfo_sidebar:hover {
+      background-color: rgb(140, 140, 140);
+    }
+
     #eventsToday, #eventsUpcoming {
       margin-bottom: 15px;
       display:block;
@@ -68,10 +111,9 @@
     }
 
     .arrow {
-      /*right: 20;*/
+      right: 30;
       position:absolute;
       margin: auto;
-      margin-left:350px;
       top:0;
       bottom: 0;
       cursor:pointer;
@@ -83,7 +125,7 @@
     .arrow:hover {
       opacity:1;
     }
-
+/*
     .active > .info_cont {
       display: inline-block;
     }
@@ -91,11 +133,11 @@
     .active > .desc {
       display:block;
     }
-    
-    .eventElem:hover .location, .eventElem:hover:not(.active) .arrow {
+    */
+    .eventElem:hover .location, .eventElem:hover .arrow {
       display:block;
     }
-
+/*
     .active > .title {
       color:black;
       display: inline-block;
@@ -109,6 +151,14 @@
 
     .active {
       border-left: solid rgb(160, 203, 238) 10px;
+    }*/
+
+    .hidden.descInfo_cont {
+        display: inline-block;
+        /*left: 0;*/
+        height:0;
+        opacity:0;
+        transition: opacity .4s, height 0 1s;
     }
 
     
@@ -267,30 +317,52 @@
       else if (receptorID === 'upcoming') var isToday = false;
 
       eventList.forEach(function(calEvent) {processEvent(calEvent, isToday, receptorID);});
-      console.log(sortedEvents);
+      listenNav();
     }
 
-    function listenForNav() {
-
+    function listenNav() {
       $('.eventElem').click(function() {
-        console.log('clicked');
-        $(this).addClass('active');
-        $('.eventElem').not($(this)).removeClass('active');
+        var title = $(this).children('.title').html();
+        var more = sortedEvents[title];
+        console.log(title);
+        $('#more_title').text(title);
+        $('#more_desc').text(more.desc);
+        $('#more_times').html('');
+        more.times.forEach(function(time) {
+          var timeString = convertToTime(new Date(time)) + " on " + generateDate(new Date(time));
+          $('#more_times').append('<p>' + timeString + '</p>');
+        });
+        $('.descInfo_cont').toggleClass('hidden');
       });
-
+      $('.descInfo_sidebar').click(function() {
+        $('.descInfo_cont').toggleClass('hidden');
+      });
     }
-
-    makeRequest('today', manageFill);
-    makeRequest('upcoming', manageFill);
-
+    
+    $(document).ready(function() {
+        makeRequest('today', manageFill);
+        makeRequest('upcoming', manageFill);
+    });
   </script>
-  <script src="https://apis.google.com/js/client.js?onload=load"></script>
+  <script src="https://apis.google.com/js/client.js?onload"></script>
 </head>
 <body>
   <div class="mainContainer">
     <div id="eventstoday"><h3>Today</h3></div>
     <div id="eventsupcoming"><h3>Upcoming</h3></div>
   </div>
+  <div class="descInfo_cont hidden">
+     <div class="descInfo">
+        <h3 id='more_title'></h3>
+        <p id='more_desc'></p>
+        <p>Next dates:</p>
+        <div id="more_times"></div>
+      </div>
+      <div class="descInfo_sidebar">
+        <img width=17 class="arrow" style="display:block;" src="http://dental.anatomage.com/images/mdstudio/right-normal.png" alt="">
+      </div>
+  </div>
+
    <!--  <button onclick="load();">click to login</button> -->
 </body>
 </html>
