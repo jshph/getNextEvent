@@ -13,49 +13,6 @@
       -webkit-margin-end: 0px;
     }
 
-    .mainContainer {
-      left: 0;
-      transition: .4s;
-      display:inline-block;
-      position:relative;
-    }
-
-    .descInfo_cont {
-      position:absolute;
-      /*left: 400;*/
-      left:0;
-      top: 0;
-      transition: opacity .4s, height 0;
-      height:700px;
-      vertical-align: top;
-      display:none;
-      opacity:1;
-    }
-
-    .descInfo {
-      width: 450px;
-      height: 100%;
-      padding: 15px;
-      background-color: rgb(229, 238, 254);
-      display: inline-block;
-      position: relative;
-      vertical-align: top;
-    }
-
-    .descInfo_sidebar {
-      width: 50px;
-      background-color: rgb(179, 179, 179);
-      height: 100%;
-      display: inline-block;
-      position: relative;
-      top: 0;
-      cursor:pointer;
-    }
-
-    .descInfo_sidebar:hover {
-      background-color: rgb(140, 140, 140);
-    }
-
     #eventsToday, #eventsUpcoming {
       margin-bottom: 15px;
       display:block;
@@ -111,9 +68,10 @@
     }
 
     .arrow {
-      right: 30;
+      /*right: 20;*/
       position:absolute;
       margin: auto;
+      margin-left:350px;
       top:0;
       bottom: 0;
       cursor:pointer;
@@ -125,7 +83,7 @@
     .arrow:hover {
       opacity:1;
     }
-/*
+
     .active > .info_cont {
       display: inline-block;
     }
@@ -133,11 +91,11 @@
     .active > .desc {
       display:block;
     }
-    */
-    .eventElem:hover .location, .eventElem:hover .arrow {
+    
+    .eventElem:hover .location, .eventElem:hover:not(.active) .arrow {
       display:block;
     }
-/*
+
     .active > .title {
       color:black;
       display: inline-block;
@@ -151,57 +109,41 @@
 
     .active {
       border-left: solid rgb(160, 203, 238) 10px;
-    }*/
-
-    .hidden.descInfo_cont {
-        display: none;
-        /*left: 0;*/
-        height:0;
-        opacity:0;
-        transition: opacity .4s, height 0 1s;
     }
 
     
   </style>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
   <script>
-    var mykey = 'AIzaSyB0XHfSOtB46ACNHAFtWRHai5cordII94E';
-    var calendarid = 'lh7f9qf4fld1kblm14b988e5ek@group.calendar.google.com';
+    var mykey = 'AIzaSyB0XHfSOtB46ACNHAFtWRHai5cordII94E'; // typically like Gtg-rtZdsreUr_fLfhgPfgff
+    var calendarid = 'lh7f9qf4fld1kblm14b988e5ek@group.calendar.google.com'; // will look somewhat like 3ruy234vodf6hf4sdf5sd84f@group.calendar.google.com
 
-    var sortedEvents = {};
 
-    function makeRequest(howSoon, callback) {
+
+    function makeRequest() {
       var newDate = new Date();
 
       // temporary event filter only lists events in the next day. Ideally, it should list events until a quota of events (3) is met to fill out the widget.
 
-      var url = 'https://www.googleapis.com/calendar/v3/calendars/' + calendarid + '/events?'
-      + 'key=' + mykey
-      + '&orderBy=startTime'
-      + '&singleEvents=true'
-      + '&maxResults=5';
-      if (howSoon === 'today') {
-        url += '&timeMin=' + newDate.toISOString();
-        newDate.setDate(newDate.getDate() + 1);
-        url += '&timeMax=' + newDate.toISOString();
-      }
-      else if (howSoon === 'upcoming') {
-        newDate.setDate(newDate.getDate() + 1);
-        url += '&timeMin=' + newDate.toISOString();
-      }
-
       $.ajax({
           type: 'GET',
-          url: encodeURI(url),
+          url: encodeURI('https://www.googleapis.com/calendar/v3/calendars/' + calendarid + '/events?'
+            + 'key=' + mykey
+            + '&singleEvents=true'
+            + '&timeMin=' + newDate.toISOString()
+            + '&orderBy=startTime'
+            + '&maxResults=5'),
           dataType: 'json',
           success: function (response) {
-              callback(response.items, howSoon);
+              sortAndFill(response.items);
           },
           error: function (response) {
               console.log(response); //error!
           }
       });
     }
+
+    makeRequest();
 
 
     // functions for later use ///////////////
@@ -234,30 +176,9 @@
       return (date.getMonth() + 1) + '/' + date.getDate();
     }
 
-    function processEvent(calEvent, isToday, receptorID) {
-      // display to view
-      $('#events' + receptorID).append($(generateElement(calEvent, isToday)));
-
-      if ($(receptorID).children().length === 1)
-        $(receptorID).append("<p>No events scheduled!</p>");
-
-      sortEvent(calEvent);
-    }
-
-    function sortEvent(calEvent) {
-      var key = calEvent.summary
-      if (!(key in sortedEvents)) {
-        // init
-        sortedEvents[key] = {
-          'desc': calEvent.description,
-          'times': new Array()
-        };
-      };
-      sortedEvents[key].times.push(calEvent.start.dateTime);
-    }
 
     // encapsulate generation of single event element, return DOM object.
-    function generateElement(calEvent, isToday) {
+    function generateElement(isToday, calEvent) {
         // Construct container for each event.
         // eventCont > linkify > info_cont > info_time + info_location
       var startTime = convertISODate(calEvent.start.dateTime);
@@ -309,60 +230,68 @@
       return eventElement;
     }
 
+    // create and preprocess startTime, convert to presentable date string for widget.
+
+/*    function fill(isToday, startIndex) {
+      if (isToday) {
+        var eventCont = $('#eventsToday');
+        for (var i = startIndex; i < this.eventList.length; i++) {// called with context, so has eventList
+          if (this.eventList[i].start.dateTime > today.getDate())
+            return i;
+          $(eventCont).append($(generateElement.call(this, this.eventList[i])));
+        }
+      }
+
+      else {
+        var eventCont = $('#eventsUpcoming');
+        for (var i = startIndex; i < this.eventList.length; i++) // called with context, so has eventList
+          $(eventCont).append($(generateElement.call(this, this.eventList[i])));
+      }
+
+      if ($(eventCont).is(':empty'))
+        $(eventCont).append("<p>No events scheduled!</p>");
+    }*/
+
+
     // populate calendar. THIS IS WHERE ALL DA MAGIC HAPPEN ///////////////
-    function manageFill(eventList, receptorID) {
+    function sortAndFill(eventList) {
       var today = new Date();
+      var i; //index
+      for (i = 0; i < eventList.length; i++) {
+        if (convertISODate(eventList[i].start.dateTime) > today.getDate()) break;
+        $('#eventsToday').append($(generateElement(true, eventList[i])));
+      }
 
-      if (receptorID === 'today') var isToday = true;
-      else if (receptorID === 'upcoming') var isToday = false;
+      if ($('#eventsToday').children().length === 1)
+        $('#eventsToday').append("<p>No events scheduled!</p>");
 
-      eventList.forEach(function(calEvent) {processEvent(calEvent, isToday, receptorID);});
-      listenNav();
+      for (i; i < eventList.length; i++)
+        $('#eventsUpcoming').append($(generateElement(false, eventList[i])));
+
+      if ($('#eventsUpcoming').children().length === 1)
+        $('#eventsUpcoming').append("<p>No events scheduled!</p>");
+
+      // fill.call(this, false, fill.call(this, true, 0));
+      listenForNav();
     }
 
-    function listenNav() {
+    function listenForNav() {
+
       $('.eventElem').click(function() {
-        var title = $(this).children('.title').html();
-        var more = sortedEvents[title];
-        console.log(title);
-        $('#more_title').text(title);
-        $('#more_desc').text(more.desc);
-        $('#more_times').html('');
-        more.times.forEach(function(time) {
-          var timeString = convertToTime(new Date(time)) + " on " + generateDate(new Date(time));
-          $('#more_times').append('<p>' + timeString + '</p>');
-        });
-        $('.descInfo_cont').toggleClass('hidden');
-      });
-      $('.descInfo_sidebar').click(function() {
-        $('.descInfo_cont').toggleClass('hidden');
+        console.log('clicked');
+        $(this).addClass('active');
+        $('.eventElem').not($(this)).removeClass('active');
       });
     }
-    
-    $(document).ready(function() {
-        makeRequest('today', manageFill);
-        makeRequest('upcoming', manageFill);
-    });
+
   </script>
-  <script src="https://apis.google.com/js/client.js?onload"></script>
+  <script src="https://apis.google.com/js/client.js?onload=load"></script>
 </head>
 <body>
   <div class="mainContainer">
-    <div id="eventstoday"><h3>Today</h3></div>
-    <div id="eventsupcoming"><h3>Upcoming</h3></div>
+    <div id="eventsToday"><h3>Today</h3></div>
+    <div id="eventsUpcoming"><h3>Upcoming</h3></div>
   </div>
-  <div class="descInfo_cont">
-     <div class="descInfo">
-        <h3 id='more_title'></h3>
-        <p id='more_desc'></p>
-        <p>Next dates:</p>
-        <div id="more_times"></div>
-      </div>
-      <div class="descInfo_sidebar">
-        <img width=17 class="arrow" style="display:block;" src="http://dental.anatomage.com/images/mdstudio/right-normal.png" alt="">
-      </div>
-  </div>
-
    <!--  <button onclick="load();">click to login</button> -->
 </body>
 </html>
